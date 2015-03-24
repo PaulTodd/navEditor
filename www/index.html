@@ -1,0 +1,397 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Phaser Full Screen Mobile Example</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1, IE=9">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Phaser App">
+    <meta name="viewport" content="initial-scale=1 maximum-scale=1 user-scalable=0 minimal-ui" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <!-- non-retina iPhone pre iOS 7 -->
+    <link rel="apple-touch-icon" sizes="57x57" href="icons/app_icon_57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="icons/app_icon_60x60.png">
+    <!-- non-retina iPad pre iOS 7 -->
+    <link rel="apple-touch-icon" sizes="72x72" href="icons/app_icon_72x72.png">
+    <!-- non-retina iPad iOS 7 -->
+    <link rel="apple-touch-icon" sizes="76x76" href="icons/app_icon_76x76.png">
+    <!-- retina iPhone pre iOS 7 -->
+    <link rel="apple-touch-icon" sizes="114x114" href="icons/app_icon_114x114.png">
+    <!-- retina iPhone iOS 7 -->
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/app_icon_120x120.png">
+    <!-- retina iPad pre iOS 7 -->
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/app_icon_144x144.png">
+    <!-- retina iPad iOS 7 -->
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/app_icon_152x152.png">
+    <link rel="apple-touch-icon" sizes="256x256" href="icons/app_icon_256x256.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/app_icon_512x512.png">
+    <link rel="apple-touch-icon" sizes="1024x1024" href="icons/app_icon_1024x1024.png">
+    <link rel="stylesheet" href="css/stylesheet.css" type="text/css" charset="utf-8" />
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css" />
+    <link href="css/bootstrap-switch.min.css" rel="stylesheet">
+    <link href="css/bootstrap.colorpickersliders.min.css" rel="stylesheet">
+    <link href="css/jquery.bootstrap-touchspin.min.css" rel="stylesheet">
+    
+    <style>
+        .btn-file {
+          position: relative;
+          overflow: hidden;
+        }
+        .btn-file input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            background: white;
+            cursor: inherit;
+            display: block;
+        }        
+        
+        .dropdown-submenu {
+            position: relative;
+        }
+
+        .dropdown-submenu>.dropdown-menu {
+            top: 0;
+            left: 100%;
+            margin-top: -6px;
+            margin-left: -1px;
+            -webkit-border-radius: 0 6px 6px 6px;
+            -moz-border-radius: 0 6px 6px;
+            border-radius: 0 6px 6px 6px;
+        }
+
+        .dropdown-submenu:hover>.dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-submenu>a:after {
+            display: block;
+            content: " ";
+            float: right;
+            width: 0;
+            height: 0;
+            border-color: transparent;
+            border-style: solid;
+            border-width: 5px 0 5px 5px;
+            border-left-color: #ccc;
+            margin-top: 5px;
+            margin-right: -10px;
+        }
+
+        .dropdown-submenu:hover>a:after {
+            border-left-color: #fff;
+        }
+
+        .dropdown-submenu.pull-left {
+            float: none;
+        }
+
+        .dropdown-submenu.pull-left>.dropdown-menu {
+            left: -100%;
+            margin-left: 10px;
+            -webkit-border-radius: 6px 0 6px 6px;
+            -moz-border-radius: 6px 0 6px 6px;
+            border-radius: 6px 0 6px 6px;
+        }
+    </style> 
+</head>
+<body>
+    <div class="container">
+        <!-- Static navbar -->
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">navEditor</a>
+                </div>
+                <div id="navbar" class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        <li><span id="f_upload" class="file-input btn navbar-btn btn-primary btn-file" style="margin-left:10px"><i class="glyphicon glyphicon-picture"></i> Add Image<input id="fileUpload" type="file" ></span></li>
+                        <li class="dropdown">
+                            <a id="file" role="button" data-toggle="dropdown" class="dropdown-toggle" data-target="#" href="#"><i class="glyphicon glyphicon-file"></i> File<span class="caret"></span></a>
+                            <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
+                              <li><a id="saveLocal" href="#"><i class="glyphicon glyphicon-floppy-save"></i> Save to localStorage</a></li>
+                              <li><a id="loadLocal" href="#"><i class="glyphicon glyphicon-floppy-open"></i> Load from localStorage</a></li>
+                              <li class="divider"></li>
+                              <li class="dropdown-submenu">
+                                <a tabindex="-1" href="#"><i class="glyphicon glyphicon-floppy-disk"></i> Save File(s) To Desktop</a>
+                                <ul class="dropdown-menu">
+                                  <li class="dropdown-submenu"></li>
+                                  <li><a id="saveMesh" href="#">Nav Mesh</a></li>
+                                  <li><a id="saveCollision" href="#">Collision Data</a></li>
+                                  <li><a id="saveBoth" href="#">Both</a></li>  
+                                  <li><a id="saveTrigger" href="#">Trigger Areas</a></li>
+                                  <li><a id="saveAll" href="#">All</a></li>
+                                </ul>
+                              </li>
+                              <li class="dropdown-submenu">
+                                <a tabindex="-1" href="#"><i class="glyphicon glyphicon-envelope"></i> MailTo</a>
+                                <ul class="dropdown-menu">
+                                  <li class="dropdown-submenu"></li>
+                                  <li><a id="mailMesh" href="#">Nav Mesh</a></li>
+                                  <li><a id="mailCollision" href="#">Collision Data</a></li>
+                                  <li><a id="mailBoth" href="#">Both</a></li>  
+                                  <li><a id="mailTrigger" href="#">Trigger Areas</a></li>
+                                  <li><a id="mailAll" href="#">All</a></li>
+                                </ul>
+                              </li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a id="edit" role="button" data-toggle="dropdown" class="dropdown-toggle" data-target="#" href="#"><i class="glyphicon glyphicon-pencil"></i> Edit<span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a id="select" href="#"><i class="glyphicon glyphicon-hand-up"></i> Select</a></li>
+                                <li><a id="drawColPoints" href="#"><i class="glyphicon glyphicon-map-marker"></i> Draw Collision Object Points</a></li>
+                                <li><a id="drawTrigPoints" href="#"><i class="glyphicon glyphicon-map-marker"></i> Draw Trigger Area Points</a></li>
+                                <li><a id="delete" href="#"><i class="glyphicon glyphicon-remove"></i> Eraser</a></li>
+                                <li class="dropdown-submenu">
+                                <a tabindex="-1" href="#"><i class="glyphicon glyphicon-trash"></i> Trash</a>
+                                <ul class="dropdown-menu">
+                                  <li class="dropdown-submenu"></li>
+                                  <li><a id="trashMesh" href="#">Nav Mesh</a></li>
+                                  <li><a id="trashCollision" href="#">Collision Data</a></li>
+                                  <li><a id="trashTrigger" href="#">Trigger Areas</a></li>
+                                  <li><a id="trashAll" href="#">All</a></li>
+                                  <li><a id="trashLocal" href="#">Saved Info</a></li>
+                                </ul>
+                              </li>
+                            </ul>
+                        </li>
+                        <li><a id="settings" role="button" data-toggle="dropdown" class="dropdown-toggle" data-target="#" href="#"><i class="glyphicon glyphicon-cog"></i> Settings<span class="caret"></span></a>
+                            <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
+                              <li><a id="levelSettings" href="#"><i class="glyphicon glyphicon-wrench"></i> Level</a></li>
+                              <li><a id="viewSettings" href="#"><i class="glyphicon glyphicon-eye-close"></i> View</a></li>
+                              <li><a id="colors" href="#"><i class="glyphicon glyphicon-tint"></i> Colors</a></li>
+                            </ul>
+                        </li>
+                        <li><a id="refreshPath" href="#"><i class="glyphicon glyphicon-refresh"></i> New Path</a></li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> Help<span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a id="docs" href="docs.html" target="_blank"><i class="glyphicon glyphicon-education"></i> Documentation</a></li>
+                                <li class="divider"></li>
+                                <li><a id="about" href="#"><i class="glyphicon glyphicon-star"></i> About</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div><!--/.nav-collapse -->
+            </div><!--/.container-fluid -->
+        </nav>
+        
+        <!-- Main canvas for rendering game stage -->
+        <div id="game" data-toggle="context" data-target="#context-menu"></div>
+        
+        <div id="context-menu">
+            <ul class="dropdown-menu" role="menu">
+                <li><a tabindex="-1">Pointer Mode</a></li>
+                <li><a tabindex="-1">Lock/Unlock Mode</a></li>
+                <li><a tabindex="-1">Draw Collision</a></li>
+                <li><a tabindex="-1">Delete</a></li>
+            </ul>
+        </div>
+        
+        <div class="bb-alert alert alert-info" style="display:none;">
+            <span></span>
+        </div>        
+
+    </div>
+    
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
+    <script src="lib/bootstrap/tinycolor.js"></script>
+    <script src="lib/bootstrap/bootbox.min.js"></script>
+    <script src="lib/bootstrap/bootstrap-switch.min.js"></script>
+    <script src="lib/bootstrap/bootstrap-contextmenu.js"></script>
+    <script src="lib/bootstrap/bootstrap.colorpickersliders.min.js"></script>
+    <script src="lib/bootstrap/jquery.bootstrap-touchspin.min.js"></script>
+        
+    <!-- Load Phaser engine -->
+    <script src="lib/phaser/phaser.min.js"></script>    
+    <script src="lib/phaser/navMesh.js"></script>  
+    <script src="lib/phaser/phaser-debug.js"></script>
+    
+    <script src="lib/util/smallestenclosingcircle.js"></script>
+    <script src="lib/util/store.js"></script>    
+    <script src="lib/util/clipper.js"></script>
+    <script src="lib/util/collision.js"></script>
+    <script src="lib/util/filesaver.js"></script>
+    <script src="lib/util/poly2tri.js"></script>
+    <!-- Load game source files -->
+    <script src="src/Game.js"></script>
+    <!-- Load game entrance -->
+    <script src="src/app.js"></script>
+    
+    <script src="src/config.js"></script>
+    <script src="src/toolbar.js"></script>
+
+    <!--Settings Forms-->
+    <div id="f_level" class="row" style="visibility:hidden">
+        <div class="col-md-12">
+            <form id="levelform" class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-md-4 control-label" for="name">File Name</label>
+                    <div class="col-md-4">
+                        <input id="tempname" name="name" type="text" placeholder="Enter File Name!!" value="" class="form-control input-md">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-4 control-label" for="">Path Smoothing</label>
+                    <div class="col-md-4">
+                        <input type="checkbox" name="smooth" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-4 control-label" for="">Spacing Around Collision Objects</label>
+                    <div class="col-md-4">
+                        <input id="spacing" type="number" value=5 name="spacing">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="f_view" class="row" style="visibility:hidden">
+        <div class="col-sm-12">
+            <form id="viewform" class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-md-4 control-label" for="">Path Width</label>
+                    <div class="col-md-4">
+                        <input id="pWidth" type="number" value=2 name="pWidth">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-4 control-label" for="">Nav Mesh Line Width</label>
+                    <div class="col-md-4">
+                        <input id="nWidth" type="number" value=2 name="nWidth">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Nav Mesh</label>
+                    <div class="col-sm-4">
+                        <input type="checkbox" name="vNavMesh" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Collision Area</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vNavMeshCollision" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Collision Objects</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vCollision" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Trigger Areas</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vTrigger" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Path</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vPath" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Debug Text</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vText" data-size="small">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Smallest Circle</label>
+                    <div class="col-sm-2">
+                        <input type="checkbox" name="vSmallestCircle" data-size="small">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="f_color" class="row" style="visibility:hidden">
+        <div class="col-sm-12">
+            <form id="viewform" class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Nav Mesh</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cNavMesh" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Nav Mesh Boarder</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cNavMeshBoarder" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Collision Area</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cNavMeshCollision" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Collision Objects</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cCollision" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Point Line</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cPointLine" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Trigger Areas</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cTrigger" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Path</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cPath" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Debug Text</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cText" value="#2FB6FF">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Smallest Circle</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="cSmallestCircle" value="#2FB6FF">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
