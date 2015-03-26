@@ -8,7 +8,10 @@ $('#game').contextmenu({
       }   
       if($(e.target).text() == "Draw Collision"){
           option = "collision";
-      }   
+      }
+      if($(e.target).text() == "Add Light"){
+          option = "light";
+      }  
       if($(e.target).text() == "Delete"){
           option = "delete";
       }   

@@ -77,8 +77,9 @@ BasicGame.Game.prototype = {
     create: function () {
         this.game.add.plugin(Phaser.Plugin.Debug);
         navPath = this.game.add.plugin(Phaser.Plugin.navPath);
-        navPath.setNavMesh([]); 
-        
+        navPath.setNavMesh([]);
+
+        lights = this.game.add.plugin(Phaser.Plugin.lights);
         cursors = this.input.keyboard.createCursorKeys();
         
         //setup path markers
@@ -151,8 +152,8 @@ BasicGame.Game.prototype = {
     },
     
     click: function() {
-        if(background !== null){
-            if((option == "collision" || option == "trigger") && this.game.input.activePointer.button == 0){
+        if(background !== null && this.game.input.activePointer.button == 0){
+            if((option == "collision" || option == "trigger")){
                 var point = this.game.add.sprite(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY, 'markers', 4);
                 point.anchor.x = 0.5;
                 point.anchor.y = 0.5;
@@ -160,6 +161,41 @@ BasicGame.Game.prototype = {
                 point.input.enableDrag();
                 point.events.onInputUp.add(function(){if(option == "delete"){ this.input.draggable = false; this.destroy();}}, point);
                 pointGroup.add(point);
+            }
+            else if(option == "light"){
+                var col = [];
+                var coltemp = [];
+                coltemp.push(new Phaser.Point(background.x-1, background.y-1));
+                coltemp.push(new Phaser.Point(background.width+1, background.y-1));
+                coltemp.push(new Phaser.Point(background.width+1, background.height+1));
+                coltemp.push(new Phaser.Point(background.x-1, background.height+1));
+                col.push(coltemp);
+                
+                for(var i = 0; i < collisionGroup.children.length; i++){
+                    col.push(collisionGroup.children[i].hitArea);                    
+                }
+                
+                lights.createSegments(JSON.parse(JSON.stringify(col)), true);
+                                                                                            //position, angle, radius, arcSegments, color1, color2, type, gradient
+                var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 136, 100, 6);
+                var points = lights.compute(myLight, 40);      
+                //DEBUG STUFF
+                var Shape = new Phaser.Polygon(); 
+                Shape.setTo(points);
+                var graphics = this.game.add.graphics();
+                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
+                graphics.drawPolygon(Shape);
+                graphics.endFill();
+                
+                graphics = this.game.add.graphics();
+                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
+                graphics.drawCircle(lights._lights[myLight].point.x,lights._lights[myLight].point.y, 5);
+                graphics.endFill();
+                
+/*                var graphics = this.game.add.graphics();
+                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
+                graphics.drawCircle(points.x,points.y, 5);
+                graphics.endFill();*/
             }
         }
     },
@@ -331,7 +367,7 @@ BasicGame.Game.prototype = {
             }
         }
         this.game.debug.stop();
-
+this.game.debug.lights(lights, 0 ,0);
         this.game.debug.navPath(navPath, 20, 20, nWidth, pWidth, vPath, true, vNavMesh, vCollision, vText, cText, cPath, cNavMeshBoarder, cNavMesh, cNavMeshCollision);
         //navPath, x, y, lineWidth, pathWidth, showPath, showPoints, showNavMesh, showCollisionObjects, showText, textColor, pathColor, lineColor, navColor, navColColor
 
