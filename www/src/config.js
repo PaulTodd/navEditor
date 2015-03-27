@@ -28,3 +28,4 @@ var cTrigger = 'rgba(255, 255, 0, 0.5)';
 var cPath = 'rgb(0, 255, 255)';
 var cText = 'rgb(255, 0, 0)';
 var cSmallestCircle = 'rgba(0, 0, 255, 0.3)';
+var cLight = 'rgba(255, 255, 0, 0.5)';

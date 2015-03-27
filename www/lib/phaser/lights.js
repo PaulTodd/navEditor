@@ -17,20 +17,6 @@ Phaser.Plugin.lights = function (parent)
 Phaser.Plugin.lights.prototype = Object.create(Phaser.Plugin.prototype);
 Phaser.Plugin.lights.prototype.constructor = Phaser.Plugin.lights;
 
-Phaser.Plugin.lights.Segment = function(point1, point2)
-{
-    //the points that make up a segment
-	this.point1 = point1;
-    this.point2 = point2;
-
-    //the center of the segment
-    //this.c = new Phaser.Point((point1.x + point2.x)*0.5), ((point1.y + point2.y)*0.5));
-
-    //this.radius = Phaser.Point.distance(point1, point2) * 0.5;
-
-    this.parent; 
-};
-
 Phaser.Plugin.lights.Light = function(position, angle, radius, arcSegments, color1, color2, type, gradient)
 {
     //starting point of the light
@@ -81,12 +67,8 @@ Phaser.Plugin.lights.prototype.createSegments = function(collisionObjects, polyg
     polygons = polygons || false;
     
     if(polygons){
-        collisionObjects = this.convertToSegments(collisionObjects);
+        this._segments = this.convertToSegments(collisionObjects);
     }   
-    
-    for(var i = 0; i < collisionObjects.length; i++){
-        this._segments.push(new Phaser.Plugin.lights.Segment(collisionObjects[i][0], collisionObjects[i][1]));
-    }
     
     this._segments = this.breakIntersections(this._segments);
     
@@ -128,21 +110,26 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
         var boundsPoly = [];
         //this makes direction center of arc
         direction -= (light.angle * 0.5) - (light.segAngle * 0.5);
-        boundsPoly.push(new Phaser.Plugin.lights.Segment(light.point, new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180))));
+        var start = light.point;
+        var end = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
+        boundsPoly.push(new Phaser.Line(start.x, start.y, end.x, end.y));
         for(var i = 1; i < light.arcSegments; i++){
             direction += light.segAngle;
-            var pos = boundsPoly[i-1].point2;
-            var nextPos = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
-            boundsPoly.push(new Phaser.Plugin.lights.Segment(pos, nextPos));
+            start = boundsPoly[i-1].end;
+            end = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
+            boundsPoly.push(new Phaser.Line(start.x, start.y, end.x, end.y));
         }
         if(light.angle >= 360){
             boundsPoly.splice(0, 1)
-             direction += light.segAngle;
-            boundsPoly.push(new Phaser.Plugin.lights.Segment(boundsPoly[boundsPoly.length-1].point2, new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180))));
+            direction += light.segAngle;
+            start = boundsPoly[boundsPoly.length-1].end;
+            end = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
         }
         else{
-            boundsPoly.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180)), light.point));
+            start = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
+            end = light.point;
         }
+        boundsPoly.push(new Phaser.Line(start.x, start.y, end.x, end.y));
         
         //Reduce amount of segments to process.  Could be slower on small areas, but large segment sets should significantly improve processing.
         var minX = Infinity;
@@ -150,17 +137,17 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
         var maxX = 0;
         var maxY = 0;
         for(var i = 0; i < boundsPoly.length; i++){
-            var p = boundsPoly[i].point1; 
+            var p = boundsPoly[i].start; 
             minX = p.x < minX ? p.x : minX; 
             minY = p.y < minY ? p.y : minY; 
             maxX = p.x > maxX ? p.x : maxX; 
             maxY = p.y > maxY ? p.y : maxY; 
         }
         var boundsTemp = [];
-        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(minX, minY), new Phaser.Point(maxX, minY)));
-        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(maxX, minY), new Phaser.Point(maxX, maxY)));
-        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(maxX, maxY), new Phaser.Point(minX, maxY)));
-        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(minX, maxY), new Phaser.Point(minX, minY)));
+        boundsTemp.push(new Phaser.Line(minX, minY, maxX, minY));
+        boundsTemp.push(new Phaser.Line(maxX, minY, maxX, maxY));
+        boundsTemp.push(new Phaser.Line(maxX, maxY, minX, maxY));
+        boundsTemp.push(new Phaser.Line(minX, maxY, minX, minY));
        
         segments = this.getSegments(boundsTemp, segments).concat(boundsPoly);
     }
@@ -190,8 +177,8 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
 	var heap = [];
 	var start = new Phaser.Point(position.x+1, position.y);
 	for (var i = 0; i < segments.length; ++i) {
-		var a1 = this.angle(segments[i].point1, position);
-		var a2 = this.angle(segments[i].point2, position);
+		var a1 = segments[i].start.angle(position, true);
+		var a2 = segments[i].end.angle(position, true);
 		var active = false;
 		if (a1 > -180 && a1 <= 0 && a2 <= 180 && a2 >= 0 && a2 - a1 > 180) active = true;
 		if (a2 > -180 && a2 <= 0 && a1 <= 180 && a1 >= 0 && a1 - a2 > 180) active = true;
@@ -205,10 +192,10 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
 		var orig = i;
 		var vertex = null;
 		if(sorted[i][1] == 0){
-			vertex = segments[sorted[i][0]].point1;
+			vertex = segments[sorted[i][0]].start;
 		}
 		else{
-			vertex = segments[sorted[i][0]].point2;
+			vertex = segments[sorted[i][0]].end;
 		}
 		var old_segment = heap[0];
 		do {
@@ -216,10 +203,10 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
 				if (sorted[i][0] == old_segment) {
 					extend = true;
 					if(sorted[i][1] == 0){
-						vertex = segments[sorted[i][0]].point1;
+						vertex = segments[sorted[i][0]].start;
 					}
 					else{
-						vertex = segments[sorted[i][0]].point2;
+						vertex = segments[sorted[i][0]].end;
 					}
 				}
 				this.remove(map[sorted[i][0]], heap, position, segments, vertex, map);
@@ -232,52 +219,25 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
 			++i;
 			if (i == sorted.length) break;
 		} while (sorted[i][2] < sorted[orig][2] + 0.0000001);
-
-		if (extend) {
+        
+        //I want to get rid of the intersection code, but using Phaser intersects causes issues.
+        if (extend) {
 			polygon.push(vertex);
             if(heap[0] !== undefined){
-			    var cur = this.intersectLines(segments[heap[0]].point1, segments[heap[0]].point2, position, vertex);
+			    var cur = this.intersectLines(segments[heap[0]].start, segments[heap[0]].end, position, vertex);
                 var pcur = new Phaser.Point(cur[0], cur[1]);
-            	if (!this.equal(pcur, vertex)) polygon.push(pcur);
+            	if (!pcur.equals(pcur, vertex)) polygon.push(pcur);
             }
 		} else if (shorten) {
             if(segments[old_segment] !== undefined){
-            var p = this.intersectLines(segments[old_segment].point1, segments[old_segment].point2, position, vertex);
-			polygon.push(new Phaser.Point(p[0], p[1]));
-            p = this.intersectLines(segments[heap[0]].point1, segments[heap[0]].point2, position, vertex);
-			polygon.push(new Phaser.Point(p[0], p[1]));
+                var p = this.intersectLines(segments[old_segment].start, segments[old_segment].end, position, vertex);
+                polygon.push(new Phaser.Point(p[0], p[1]));
+                p = this.intersectLines(segments[heap[0]].start, segments[heap[0]].end, position, vertex);
+                polygon.push(new Phaser.Point(p[0], p[1]));
             }
 		} 
-
 	}
 	return polygon;    
-};
-
-Phaser.Plugin.lights.prototype.inPolygon = function(position, polygon) {
-	var val = 0;
-	for (var i = 0; i < polygon.length; ++i) {
-		val = Math.min(polygon[i].x, val);
-		val = Math.min(polygon[i].y, val);
-	}
-	var edge = new Phaser.Point(val-1, val-1);
-	var parity = 0;
-	for (var i = 0; i < polygon.length; ++i) {
-		var j = i + 1;
-		if (j == polygon.length) j = 0;
-		if (this.doLineSegmentsIntersect(edge.x, edge.y, position.x, position.y, polygon[i].x, polygon[i].y, polygon[j].x, polygon[j].y)) {
-			var intersect = this.intersectLines(edge, position, polygon[i], polygon[j]);
-			var pIntersect = new Phaser.Point(intersect[0], intersect[1]);
-			if (this.equal(position, pIntersect)) return true;
-			if (this.equal(pIntersect, polygon[i])) {
-				if (this.angle2(position, edge, polygon[j]) < 180) ++parity;
-			} else if (this.equal(pIntersect, polygon[j])) {
-				if (this.angle2(position, edge, polygon[i]) < 180) ++parity;
-			} else {
-				++parity;
-			}
-		}
-	}
-	return (parity%2)!=0;
 };
 
 Phaser.Plugin.lights.prototype.convertToSegments = function(polygons) {//[[{x:1,y:0},{0,1},{1,1}],[{2,0},{2,2},{0,2}], ...] i = x j = 3
@@ -285,8 +245,8 @@ Phaser.Plugin.lights.prototype.convertToSegments = function(polygons) {//[[{x:1,
 	for (var i = 0; i < polygons.length; ++i) {
 		for (var j = 0; j < polygons[i].length; ++j) {
 			var k = j+1;
-			if (k == polygons[i].length) k = 0;
-			segments.push([polygons[i][j], polygons[i][k]]);
+			if (k == polygons[i].length) k = 0;            
+			segments.push(new Phaser.Line(polygons[i][j].x, polygons[i][j].y, polygons[i][k].x, polygons[i][k].y));
 		}
 	}
 	return segments;
@@ -298,43 +258,41 @@ Phaser.Plugin.lights.prototype.breakIntersections = function(segments) {
 		var intersections = [];
 		for (var j = 0; j < segments.length; ++j) {
 			if (i == j) continue;
-			if (this.doLineSegmentsIntersect(segments[i].point1.x, segments[i].point1.y, segments[i].point2.x, segments[i].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y)) {
-				var intersect = this.intersectLines(segments[i].point1, segments[i].point2, segments[j].point1, segments[j].point2);
-                if (intersect.length != 2) continue;
-				var pIntersect = new Phaser.Point(intersect[0], intersect[1]);				
-				if (this.equal(pIntersect, segments[i].point1) || this.equal(pIntersect, segments[i].point2)) continue;
-				intersections.push(pIntersect);
-			}
+            var intersect = segments[i].intersects(segments[j]);
+            if (intersect === null) continue;
+            if (intersect.equals(segments[i].start) || intersect.equals(segments[i].end)) continue;
+            intersections.push(intersect);
 		}
-		var start = segments[i].point1;
+		var start = segments[i].start;
 		while (intersections.length > 0) {
 			var endIndex = 0;
-			var endDis = this.distance(start, intersections[0]);
+			var endDis = start.distance(intersections[0]);
 			for (var j = 1; j < intersections.length; ++j) {
-				var dis = this.distance(start, intersections[j]);
+				var dis = start.distance(intersections[j]);
 				if (dis < endDis) {
 					endDis = dis;
 					endIndex = j;
 				}
 			}
-			output.push(new Phaser.Plugin.lights.Segment(start, intersections[endIndex]));
+			output.push(new Phaser.Line(start.x, start.y, intersections[endIndex].x, intersections[endIndex].y));
 			start = intersections[endIndex];
 			intersections.splice(endIndex, 1);
 		}
-		output.push(new Phaser.Plugin.lights.Segment(start, segments[i].point2));
+		output.push(new Phaser.Line(start.x, start.y, segments[i].end.x, segments[i].end.y));
 	}
 	return output;
 };
 
 Phaser.Plugin.lights.prototype.getSegments = function(boundsTemp, segments) {
 	var output = [];
+    var width = boundsTemp[0].end.x - boundsTemp[0].start.x;
+    var height = boundsTemp[1].end.y -  boundsTemp[0].end.y;
     for (var j = 0; j < segments.length; ++j) {
-        if (this.doLineSegmentsIntersect(boundsTemp[0].point1.x, boundsTemp[0].point1.y, boundsTemp[0].point2.x, boundsTemp[0].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
-           this.doLineSegmentsIntersect(boundsTemp[1].point1.x, boundsTemp[1].point1.y, boundsTemp[1].point2.x, boundsTemp[1].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
-           this.doLineSegmentsIntersect(boundsTemp[2].point1.x, boundsTemp[2].point1.y, boundsTemp[2].point2.x, boundsTemp[2].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) || 
-           this.doLineSegmentsIntersect(boundsTemp[3].point1.x, boundsTemp[3].point1.y, boundsTemp[3].point2.x, boundsTemp[3].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
-(segments[j].point1.x >= boundsTemp[0].point1.x && segments[j].point1.x < boundsTemp[2].point1.x && segments[j].point1.y >= boundsTemp[0].point1.y && segments[j].point1.y < boundsTemp[2].point1.y)) {
-            output.push(new Phaser.Plugin.lights.Segment(segments[j].point1, segments[j].point2));
+        if(boundsTemp[0].intersects(segments[j], false) ||
+           boundsTemp[1].intersects(segments[j], false) ||
+           boundsTemp[2].intersects(segments[j], false) ||
+           boundsTemp[3].intersects(segments[j], false)){
+            output.push(new Phaser.Line(segments[j].start.x, segments[j].start.y, segments[j].end.x, segments[j].end.y));
         }
     }
 	return output;
@@ -354,10 +312,10 @@ Phaser.Plugin.lights.prototype.remove = function(index, heap, position, segments
 	heap[index] = heap.pop();
 	map[heap[index]] = index;
 	var cur = index;
-	var parent = this.lightParent(cur);
+	var parent = Math.floor((cur-1)/2);
 	if (cur != 0 && this.lessThan(heap[cur], heap[parent], position, segments, destination)) {
 		while (cur > 0) {
-			var parent = this.lightParent(cur);
+			var parent = Math.floor((cur-1)/2);
 			if (!this.lessThan(heap[cur], heap[parent], position, segments, destination)) {
 				break;
 			}
@@ -370,7 +328,7 @@ Phaser.Plugin.lights.prototype.remove = function(index, heap, position, segments
 		}
 	} else {
 		while (true) {
-			var left = this.child(cur);
+			var left = 2*cur+1;
 			var right = left + 1;
 			if (left < heap.length && this.lessThan(heap[left], heap[cur], position, segments, destination) &&
 					(right == heap.length || this.lessThan(heap[left], heap[right], position, segments, destination))) {
@@ -393,13 +351,12 @@ Phaser.Plugin.lights.prototype.remove = function(index, heap, position, segments
 };
 
 Phaser.Plugin.lights.prototype.insert = function(index, heap, position, segments, destination, map) {
-	var intersect = this.intersectLines(segments[index].point1, segments[index].point2, position, destination);
-	if (intersect.length == 0) return;
+    if (segments[index].intersects(new Phaser.Line(position.x, position.y, destination.x, destination.y), false) == null) return;
 	var cur = heap.length;
 	heap.push(index);
 	map[index] = cur;
 	while (cur > 0) {
-		var parent = this.lightParent(cur);
+		var parent = Math.floor((cur-1)/2);
 		if (!this.lessThan(heap[cur], heap[parent], position, segments, destination)) {
 			break;
 		}
@@ -413,27 +370,28 @@ Phaser.Plugin.lights.prototype.insert = function(index, heap, position, segments
 };
 
 Phaser.Plugin.lights.prototype.lessThan = function(index1, index2, position, segments, destination) {
-	var inter1 = this.intersectLines(segments[index1].point1, segments[index1].point2, position, destination);
+    //I want to get rid of the intersection code, but using Phaser intersects causes issues.
+	var inter1 = this.intersectLines(segments[index1].start, segments[index1].end, position, destination);
 	var pIntersect1 = new Phaser.Point(inter1[0], inter1[1]);
-	var inter2 = this.intersectLines(segments[index2].point1, segments[index2].point2, position, destination);
+	var inter2 = this.intersectLines(segments[index2].start, segments[index2].end, position, destination);
 	var pIntersect2 = new Phaser.Point(inter2[0], inter2[1]);
 	if (!this.equal(pIntersect1, pIntersect2)) {
-		var d1 = this.distance(pIntersect1, position);
-		var d2 = this.distance(pIntersect2, position);
+		var d1 = Phaser.Point.distance(pIntersect1, position);
+		var d2 = Phaser.Point.distance(pIntersect2, position);
 		return d1 < d2;
 	}
     var a1 = null;
     var a2 = null;
-	if (this.equal(pIntersect1, segments[index1].point1)){
-        a1 = this.angle2(segments[index1].point2, pIntersect1, position);
+	if (pIntersect1.equals(segments[index1].start)){
+        a1 = this.angle2(segments[index1].end, pIntersect1, position);
     }
     else{
-        a1 = this.angle2(segments[index1].point1, pIntersect1, position);
+        a1 = this.angle2(segments[index1].start, pIntersect1, position);
     }
-	if (this.equal(pIntersect2, segments[index2].point1)){
-        a2 = this.angle2(segments[index2].point2, pIntersect2, position);
+	if (pIntersect2.equals(segments[index2].start)){
+        a2 = this.angle2(segments[index2].end, pIntersect2, position);
     }else {
-        a2 = this.angle2(segments[index2].point1, pIntersect2, position);
+        a2 = this.angle2(segments[index2].start, pIntersect2, position);
     }
 	if (a1 < 180) {
 		if (a2 > 180) return true;
@@ -442,36 +400,21 @@ Phaser.Plugin.lights.prototype.lessThan = function(index1, index2, position, seg
 	return a1 < a2;
 };
 
-Phaser.Plugin.lights.prototype.lightParent = function(index) {
-	return Math.floor((index-1)/2);
-};
-
-Phaser.Plugin.lights.prototype.child = function(index) {
-	return 2*index+1;
-};
-
 Phaser.Plugin.lights.prototype.angle2 = function(a, b, c) {
-	var a1 = this.angle(a,b);
-	var a2 = this.angle(b,c);
-	var a3 = a1 - a2;
-	if (a3 < 0) a3 += 360;
-	if (a3 > 360) a3 -= 360;
-	return a3;
+	var r = a.angle(b, true) - b.angle(c, true);
+	if (r < 0) r += 360;
+	if (r > 360) r -= 360;
+	return r;
 };
 
-//WORK ON?
 Phaser.Plugin.lights.prototype.sortPoints = function(position, segments) {
 	var points = new Array(segments.length * 2);
 	for (var i = 0; i < segments.length; ++i) {
-		points[2*i] = [i, 0, this.angle(segments[i].point1, position)];
-		points[2*i+1] = [i, 1, this.angle(segments[i].point2, position)];
+		points[2*i] = [i, 0, segments[i].start.angle(position, true)];
+		points[2*i+1] = [i, 1, segments[i].end.angle(position, true)];
 	}
 	points.sort(function(a,b) {return a[2]-b[2];});
 	return points;
-};
-
-Phaser.Plugin.lights.prototype.angle = function(a, b) {
-	return Math.atan2(b.y-a.y, b.x-a.x) * 180 / Math.PI;
 };
 
 Phaser.Plugin.lights.prototype.intersectLines = function(a1, a2, b1, b2) {
@@ -487,47 +430,19 @@ Phaser.Plugin.lights.prototype.intersectLines = function(a1, a2, b1, b2) {
 	return [];
 };
 
-Phaser.Plugin.lights.prototype.distance = function(a, b) {
-	return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y);
-};
-
-Phaser.Plugin.lights.prototype.isOnSegment = function(xi, yi, xj, yj, xk, yk) {
-  return (xi <= xk || xj <= xk) && (xk <= xi || xk <= xj) &&
-         (yi <= yk || yj <= yk) && (yk <= yi || yk <= yj);
-};
-
-Phaser.Plugin.lights.prototype.computeDirection = function(xi, yi, xj, yj, xk, yk) {
-  a = (xk - xi) * (yj - yi);
-  b = (xj - xi) * (yk - yi);
-  return a < b ? -1 : a > b ? 1 : 0;
-};
-
-Phaser.Plugin.lights.prototype.doLineSegmentsIntersect = function(x1, y1, x2, y2, x3, y3, x4, y4) {
-  d1 = this.computeDirection(x3, y3, x4, y4, x1, y1);
-  d2 = this.computeDirection(x3, y3, x4, y4, x2, y2);
-  d3 = this.computeDirection(x1, y1, x2, y2, x3, y3);
-  d4 = this.computeDirection(x1, y1, x2, y2, x4, y4);
-  return (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-          ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) ||
-         (d1 == 0 && this.isOnSegment(x3, y3, x4, y4, x1, y1)) ||
-         (d2 == 0 && this.isOnSegment(x3, y3, x4, y4, x2, y2)) ||
-         (d3 == 0 && this.isOnSegment(x1, y1, x2, y2, x3, y3)) ||
-         (d4 == 0 && this.isOnSegment(x1, y1, x2, y2, x4, y4));
-};
-
 Phaser.Utils.Debug.prototype.lights = function(lights, x, y)
 {
     for(var i = 0; i < lights._points.length; i++){
         this.context.strokeStyle = Phaser.Color.getRandomColor();
         this.context.lineWidth = 2;
         this.context.beginPath();
-        this.context.moveTo(lights._points[i].point1.x - this.game.camera.x, lights._points[i].point1.y - this.game.camera.y);
-        this.context.lineTo(lights._points[i].point2.x - this.game.camera.x, lights._points[i].point2.y - this.game.camera.y);
+        this.context.moveTo(lights._points[i].start.x - this.game.camera.x, lights._points[i].start.y - this.game.camera.y);
+        this.context.lineTo(lights._points[i].end.x - this.game.camera.x, lights._points[i].end.y - this.game.camera.y);
         this.context.fill();
         this.context.stroke();
         
         this.context.beginPath();
-        this.context.arc(lights._points[i].point1.x - this.game.camera.x, lights._points[i].point1.y - this.game.camera.y, 2, 0, Math.PI*2, true);
+        this.context.arc(lights._points[i].start.x - this.game.camera.x, lights._points[i].start.y - this.game.camera.y, 2, 0, Math.PI*2, true);
         this.context.stroke(); 
     }
 };

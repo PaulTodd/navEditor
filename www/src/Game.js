@@ -15,6 +15,7 @@ BasicGame.Game = function (game) {
     myGame = game;
     background = null;
     dragging = null;
+    draggingLight = null;
     pathDragging = false;
     navMesh = [];   
     
@@ -80,6 +81,7 @@ BasicGame.Game.prototype = {
         navPath.setNavMesh([]);
 
         lights = this.game.add.plugin(Phaser.Plugin.lights);
+        
         cursors = this.input.keyboard.createCursorKeys();
         
         //setup path markers
@@ -104,6 +106,7 @@ BasicGame.Game.prototype = {
         collisionGroup = this.add.group();        
         triggerGroup = this.add.group();         
         pointGroup = this.add.group(); 
+        lightGroup = this.add.group(); 
 
         //setup keyboard commands
         k_createCollision = this.input.keyboard.addKey(Phaser.Keyboard.C);
@@ -121,6 +124,28 @@ BasicGame.Game.prototype = {
                         collisionGroup.children[i].hitArea[j].y = collisionGroup.children[i].hitArea[j].y+collisionGroup.children[i].deltaY;
                     }
                     this.calculate();
+                }
+            }
+        }
+        
+        if(draggingLight !== null){
+            for(var i = 0; i < lightGroup.children.length; i++){
+                if(lightGroup.children[i] == draggingLight){
+                    draggingLight.light.point = new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY);
+                    var points = lights.compute(draggingLight.light,0)
+                    var Shape = new Phaser.Polygon(); 
+                    Shape.setTo(points);
+                    var graphics = this.game.add.graphics();
+                    graphics.boundsPadding = 0;
+                    graphics.beginFill("0x"+tinycolor(cLight).toHex(), tinycolor(cLight).getAlpha());
+                    graphics.drawPolygon(Shape);
+                    graphics.endFill();
+                    
+                    draggingLight.loadTexture(graphics.generateTexture());
+                    draggingLight.world = graphics.world;
+                    draggingLight.hitArea = points;
+                    
+                    graphics.destroy();
                 }
             }
         }
@@ -163,39 +188,34 @@ BasicGame.Game.prototype = {
                 pointGroup.add(point);
             }
             else if(option == "light"){
-                var col = [];
-                var coltemp = [];
-                coltemp.push(new Phaser.Point(background.x-1, background.y-1));
-                coltemp.push(new Phaser.Point(background.width+1, background.y-1));
-                coltemp.push(new Phaser.Point(background.width+1, background.height+1));
-                coltemp.push(new Phaser.Point(background.x-1, background.height+1));
-                col.push(coltemp);
-                
-                for(var i = 0; i < collisionGroup.children.length; i++){
-                    col.push(collisionGroup.children[i].hitArea);                    
-                }
-                
-                lights.createSegments(JSON.parse(JSON.stringify(col)), true);
-                                                                                            //position, angle, radius, arcSegments, color1, color2, type, gradient
+                                                                                        //position, angle, radius, arcSegments, color1, color2, type, gradient
                 var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 100, 100, 8);
-                var points = lights.compute(myLight,0);      
-                //DEBUG STUFF
+                var points = lights.compute(myLight,0)
                 var Shape = new Phaser.Polygon(); 
-                Shape.setTo(points);
+                Shape.setTo(points);                
                 var graphics = this.game.add.graphics();
-                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
+                graphics.boundsPadding = 0;
+                graphics.beginFill("0x"+tinycolor(cLight).toHex(), tinycolor(cLight).getAlpha());
                 graphics.drawPolygon(Shape);
                 graphics.endFill();
-                
-                graphics = this.game.add.graphics();
-                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
-                graphics.drawCircle(myLight.point.x,myLight.point.y, 5);
-                graphics.endFill();
-                
-/*                var graphics = this.game.add.graphics();
-                graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
-                graphics.drawCircle(points.x,points.y, 5);
-                graphics.endFill();*/
+                //find smallest x and y
+                var x = 9999999;
+                var y = 9999999;
+                for(var i = 0; i < points.length; i++){
+                    x = Math.min(x, points[i].x);
+                    y = Math.min(y, points[i].y);
+                }
+                var sprite = this.game.add.sprite(x, y, graphics.generateTexture());
+                sprite.light = myLight;
+                sprite.world = graphics.world;
+                sprite.hitArea = points;
+                sprite.inputEnabled = true;
+                sprite.input.enableDrag();
+                sprite.events.onDragStart.add(function(){draggingLight = this;}, sprite);
+                sprite.events.onDragStop.add(function(){draggingLight = null;}, sprite);
+                sprite.events.onInputUp.add(function(){if(option == "delete"){ this.input.draggable = false; lights.remove(this.light); this.destroy();}else if(option == "lock"){this.input.draggable = !this.input.draggable;}}, sprite);
+                lightGroup.add(sprite); 
+                graphics.destroy();        
             }
         }
     },
@@ -209,6 +229,7 @@ BasicGame.Game.prototype = {
             var Shape = new Phaser.Polygon(); 
             Shape.setTo(points);
             var graphics = this.add.graphics();
+            graphics.boundsPadding = 0;
             graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
             graphics.drawPolygon(Shape);
             graphics.endFill();
@@ -219,7 +240,7 @@ BasicGame.Game.prototype = {
                 x = Math.min(x, points[i].x);
                 y = Math.min(y, points[i].y);
             }
-            var sprite = this.add.sprite(x-10, y-10, graphics.generateTexture());
+            var sprite = this.add.sprite(x, y, graphics.generateTexture());
             sprite.world = graphics.world;
             sprite.hitArea = points;
             sprite.inputEnabled = true;
@@ -237,7 +258,22 @@ BasicGame.Game.prototype = {
             }
             graphics.destroy();
             pointGroup.removeAll();
+            this.updateLights();
         }
+    },
+    
+    updateLights: function(){
+        var col = [];
+        var coltemp = [];
+        coltemp.push(new Phaser.Point(background.x-1, background.y-1));
+        coltemp.push(new Phaser.Point(background.width+1, background.y-1));
+        coltemp.push(new Phaser.Point(background.width+1, background.height+1));
+        coltemp.push(new Phaser.Point(background.x-1, background.height+1));
+        coltemp.push(coltemp);
+        for(var i = 0; i < collisionGroup.children.length; i++){
+            col.push(collisionGroup.children[i].hitArea);                    
+        }
+        lights.createSegments(JSON.parse(JSON.stringify(col)), true);   
     },
     
     calculate: function () {
@@ -610,6 +646,7 @@ function onLoaded(){
     myGame.world.sort();
     background.inputEnabled = true;
     background.events.onInputUp.add(BasicGame.Game.prototype.click, background);
+    BasicGame.Game.prototype.updateLights();
 }
 
 document.getElementById("fileUpload").addEventListener("change", readImage, false);
