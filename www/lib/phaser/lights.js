@@ -31,11 +31,8 @@ Phaser.Plugin.lights.Segment = function(point1, point2)
     this.parent; 
 };
 
-Phaser.Plugin.lights.Light = function(id, position, angle, radius, arcSegments, color1, color2, type, gradient)
+Phaser.Plugin.lights.Light = function(position, angle, radius, arcSegments, color1, color2, type, gradient)
 {
-    //unique id to help find the light
-	this.id = id;
-
     //starting point of the light
 	this.point = position || new Phaser.Point(0, 0);
     this.angle = angle || 360;
@@ -43,16 +40,22 @@ Phaser.Plugin.lights.Light = function(id, position, angle, radius, arcSegments, 
         this.angle = 360;
     }
     this.radius = radius || 100;
-    this.arcSegments = arcSegments || 10;
+    this.arcSegments = arcSegments || 0;
     if(this.angle == 360 && this.arcSegments < 3){
-        this.arcSegments = 3;
+        if(this.arcSegments > 0){
+            this.arcSegments = 3;
+        }        
     }
-    else if(arcSegments = 0){
+    else if(arcSegments == 0){
         this.arcSegments = 1;
     }
     
-    this.segAngle = this.angle / this.arcSegments;
+    this.segAngle = 0;
     
+    if(this.arcSegments > 0){
+        this.segAngle = this.angle / this.arcSegments;
+    }
+
     this.color1 = color1 || 'rgb(255,60,60)';
     this.color2 = color2 || 'rgb(255,60,60)';
     
@@ -91,18 +94,17 @@ Phaser.Plugin.lights.prototype.createSegments = function(collisionObjects, polyg
 
 Phaser.Plugin.lights.prototype.addLight = function(position, angle, radius, arcSegments, color1, color2, type, gradient)
 {
-    var lightID = this._lights.length;
-    this._lights.push(new Phaser.Plugin.lights.Light(this._lights.length, position, angle, radius, arcSegments, color1, color2, type, gradient));
+    var light = new Phaser.Plugin.lights.Light(position, angle, radius, arcSegments, color1, color2, type, gradient);
+    this._lights.push(light);
     
-    return lightID;    
+    return light;    
 };
 
-Phaser.Plugin.lights.prototype.removeLight = function(id)
+Phaser.Plugin.lights.prototype.removeLight = function(light)
 {
     if(this._lights.length > 0){
-        this._lights[id].splice(id, 1);
         for(var i = 0; i < this._lights.length; i++){
-            if(this._lights[i].id == id){
+            if(this._lights[i] == light){
                 this._lights.splice(i, 1); 
                 break;
             } 
@@ -112,54 +114,74 @@ Phaser.Plugin.lights.prototype.removeLight = function(id)
     return false;
 };
 
-Phaser.Plugin.lights.prototype.compute = function(id, direction) {
-    direction = direction || 0;
-    var light = null;
-    for(var i = 0; i < this._lights.length; i++){
-        if(this._lights[i].id == id){
-            light = this._lights[i];
-            break;
-        } 
-    }
+Phaser.Plugin.lights.prototype.compute = function(light, direction) {
+    var init_direction = direction || 0;
+    init_direction *= -1;
+    direction = init_direction;
+    
     if(light === null){
         return [];   
     }
-    var segLen = this._segments.length;
     var segments = this._segments;
-    var boundsPoly = [];
-    //this makes direction center of arc
-    direction -= (light.segAngle * light.arcSegments * 0.5);
+    
+    if(light.arcSegments > 0){
+        var boundsPoly = [];
+        //this makes direction center of arc
+        direction -= (light.angle * 0.5) - (light.segAngle * 0.5);
         boundsPoly.push(new Phaser.Plugin.lights.Segment(light.point, new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180))));
-    for(var i = 1; i < light.arcSegments; i++){
-        direction += light.segAngle;
-        var pos = boundsPoly[i-1].point2;
-        var nextPos = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
-        boundsPoly.push(new Phaser.Plugin.lights.Segment(pos, nextPos));
-    }
-    if(light.angle >= 360){
-        boundsPoly.splice(0, 1)
-         direction += light.segAngle;
-        boundsPoly.push(new Phaser.Plugin.lights.Segment(boundsPoly[boundsPoly.length-1].point2, new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180))));
-    }
-    else{
-        boundsPoly.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180)), light.point));
+        for(var i = 1; i < light.arcSegments; i++){
+            direction += light.segAngle;
+            var pos = boundsPoly[i-1].point2;
+            var nextPos = new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180));
+            boundsPoly.push(new Phaser.Plugin.lights.Segment(pos, nextPos));
+        }
+        if(light.angle >= 360){
+            boundsPoly.splice(0, 1)
+             direction += light.segAngle;
+            boundsPoly.push(new Phaser.Plugin.lights.Segment(boundsPoly[boundsPoly.length-1].point2, new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180))));
+        }
+        else{
+            boundsPoly.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(light.point.x + light.radius * Math.cos(direction * Math.PI / 180), light.point.y + light.radius * Math.sin(direction * Math.PI / 180)), light.point));
+        }
+        
+        //Reduce amount of segments to process.  Could be slower on small areas, but large segment sets should significantly improve processing.
+        var minX = Infinity;
+        var minY = Infinity;
+        var maxX = 0;
+        var maxY = 0;
+        for(var i = 0; i < boundsPoly.length; i++){
+            var p = boundsPoly[i].point1; 
+            minX = p.x < minX ? p.x : minX; 
+            minY = p.y < minY ? p.y : minY; 
+            maxX = p.x > maxX ? p.x : maxX; 
+            maxY = p.y > maxY ? p.y : maxY; 
+        }
+        var boundsTemp = [];
+        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(minX, minY), new Phaser.Point(maxX, minY)));
+        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(maxX, minY), new Phaser.Point(maxX, maxY)));
+        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(maxX, maxY), new Phaser.Point(minX, maxY)));
+        boundsTemp.push(new Phaser.Plugin.lights.Segment(new Phaser.Point(minX, maxY), new Phaser.Point(minX, minY)));
+       
+        segments = this.getSegments(boundsTemp, segments).concat(boundsPoly);
     }
     
-    /*var temp = [];
-    for(var i = 0; i < boundsPoly.length; i++){
-        temp.push(boundsPoly[i].point1);
-    }
-    
-    return temp;*/
-    
-    segments = this.breakIntersections(JSON.parse(JSON.stringify(segments.concat(boundsPoly)))); 
+    segments = this.breakIntersections(segments); 
     //for debug
-    this._points = JSON.parse(JSON.stringify(segments));
+    this._points = segments;
     
-    var t = boundsPoly[0].point2;
-    var d = Math.atan2(t.y - light.point.y, t.x - light.point.x);
+    var t = new Phaser.Point(light.point.x + light.radius * Math.cos(init_direction * Math.PI / 180), light.point.y + light.radius * Math.sin(init_direction * Math.PI / 180));
+    
+    var x = t.x - light.point.x;
+    var y = t.y - light.point.y;
+    // Get absolute value of each vector
+    var ax = Math.abs(x);
+    var ay = Math.abs(y);
+    // Create a ratio
+    var ratio = 1 / Math.max(ax, ay);
+    ratio = ratio * (1.29289 - (ax + ay) * ratio * 0.29289)
+
     //not coming out right!!!!
-    var position = new Phaser.Point(light.point.x + Math.sin(d)*0, light.point.y + Math.cos(d)*0);
+    var position = new Phaser.Point(light.point.x + (x * ratio), light.point.y + (y * ratio));
     //return position;
 	var polygon = [];
 	var sorted = this.sortPoints(position, segments);
@@ -284,7 +306,7 @@ Phaser.Plugin.lights.prototype.breakIntersections = function(segments) {
 				intersections.push(pIntersect);
 			}
 		}
-		var start = JSON.parse(JSON.stringify(segments[i].point1));
+		var start = segments[i].point1;
 		while (intersections.length > 0) {
 			var endIndex = 0;
 			var endDis = this.distance(start, intersections[0]);
@@ -295,12 +317,26 @@ Phaser.Plugin.lights.prototype.breakIntersections = function(segments) {
 					endIndex = j;
 				}
 			}
-			output.push(new Phaser.Plugin.lights.Segment(JSON.parse(JSON.stringify(start)), JSON.parse(JSON.stringify(intersections[endIndex]))));
-			start = JSON.parse(JSON.stringify(intersections[endIndex]));
+			output.push(new Phaser.Plugin.lights.Segment(start, intersections[endIndex]));
+			start = intersections[endIndex];
 			intersections.splice(endIndex, 1);
 		}
-		output.push(new Phaser.Plugin.lights.Segment(JSON.parse(JSON.stringify(start)), JSON.parse(JSON.stringify(segments[i].point2))));
+		output.push(new Phaser.Plugin.lights.Segment(start, segments[i].point2));
 	}
+	return output;
+};
+
+Phaser.Plugin.lights.prototype.getSegments = function(boundsTemp, segments) {
+	var output = [];
+    for (var j = 0; j < segments.length; ++j) {
+        if (this.doLineSegmentsIntersect(boundsTemp[0].point1.x, boundsTemp[0].point1.y, boundsTemp[0].point2.x, boundsTemp[0].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
+           this.doLineSegmentsIntersect(boundsTemp[1].point1.x, boundsTemp[1].point1.y, boundsTemp[1].point2.x, boundsTemp[1].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
+           this.doLineSegmentsIntersect(boundsTemp[2].point1.x, boundsTemp[2].point1.y, boundsTemp[2].point2.x, boundsTemp[2].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) || 
+           this.doLineSegmentsIntersect(boundsTemp[3].point1.x, boundsTemp[3].point1.y, boundsTemp[3].point2.x, boundsTemp[3].point2.y, segments[j].point1.x, segments[j].point1.y, segments[j].point2.x, segments[j].point2.y) ||
+(segments[j].point1.x >= boundsTemp[0].point1.x && segments[j].point1.x < boundsTemp[2].point1.x && segments[j].point1.y >= boundsTemp[0].point1.y && segments[j].point1.y < boundsTemp[2].point1.y)) {
+            output.push(new Phaser.Plugin.lights.Segment(segments[j].point1, segments[j].point2));
+        }
+    }
 	return output;
 };
 

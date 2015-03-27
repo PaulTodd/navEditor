@@ -17,7 +17,6 @@ TODO:
 * Not always shortest path
 
 * Lights Plugin:
-* Need to figure the best way to move the point away from the start point so that it is inside the visibility polygon.
 
 * Features:
 * Editor:
@@ -32,5 +31,3 @@ TODO:
 * Work on the flexability of the visibility polygon plugin
 * Make lights draggable
 * Clean up code!!!
-* Optimize array storage and manipulation. I think I'm using too many Json.stringifies. Was worried the arrays were getting manipulated when I didn't want them to be.  Will need to reduce them and see if any thing breaks.
-*  

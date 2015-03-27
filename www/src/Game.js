@@ -177,8 +177,8 @@ BasicGame.Game.prototype = {
                 
                 lights.createSegments(JSON.parse(JSON.stringify(col)), true);
                                                                                             //position, angle, radius, arcSegments, color1, color2, type, gradient
-                var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 136, 100, 6);
-                var points = lights.compute(myLight, 40);      
+                var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 100, 100, 8);
+                var points = lights.compute(myLight,0);      
                 //DEBUG STUFF
                 var Shape = new Phaser.Polygon(); 
                 Shape.setTo(points);
@@ -189,7 +189,7 @@ BasicGame.Game.prototype = {
                 
                 graphics = this.game.add.graphics();
                 graphics.beginFill("0x"+tinycolor(cCollision).toHex(), tinycolor(cCollision).getAlpha());
-                graphics.drawCircle(lights._lights[myLight].point.x,lights._lights[myLight].point.y, 5);
+                graphics.drawCircle(myLight.point.x,myLight.point.y, 5);
                 graphics.endFill();
                 
 /*                var graphics = this.game.add.graphics();
