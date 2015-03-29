@@ -264,6 +264,22 @@ Phaser.Plugin.navPath.prototype.find = function(startPoint, endPoint, zs, ze, sm
 	var gScore;
 	var gScoreIsBest;
     
+    if(smooth){
+        var isCollision = false;
+        for(var i = 0; i < this._collisionObjects.length; i++){
+            var currPoly = this._collisionObjects[i];
+            if(this.intersectLineLineSmooth(startPoint, endPoint, currPoly.start, currPoly.end)){
+                isCollision = true;
+                break;
+            }
+        }
+        if(!isCollision){
+            this._path.push(startPoint);
+            this._path.push(endPoint);
+            return this._path;
+        }
+    }
+    
 	var curr = null;
 	while ( (!found) && (ol.length) ) {
 		curr = ol.shift();
@@ -390,7 +406,7 @@ Phaser.Plugin.navPath.prototype.stringPull = function() {
 
 		// Update right vertex.
 		if (this.triArea(portalApex, portalRight, right) <= 0.0) {
-			if (this.distance(portalApex, portalRight) < 0.000001 || this.triArea(portalApex, portalLeft, right) > 0.0) {
+			if (portalApex.distance(portalRight) < 0.000001 || this.triArea(portalApex, portalLeft, right) > 0.0) {
 				// Tighten the funnel.
 				portalRight = right;
 				rightIndex = i;
@@ -413,7 +429,7 @@ Phaser.Plugin.navPath.prototype.stringPull = function() {
 
 		// Update left vertex.
 		if (this.triArea(portalApex, portalLeft, left) >= 0.0) {
-			if (this.distance(portalApex, portalLeft) < 0.000001 || this.triArea(portalApex, portalRight, left) < 0.0) {
+			if (portalApex.distance(portalLeft) < 0.000001 || this.triArea(portalApex, portalRight, left) < 0.0) {
 				// Tighten the funnel.
 				portalLeft = left;
 				leftIndex = i;
@@ -435,7 +451,7 @@ Phaser.Plugin.navPath.prototype.stringPull = function() {
 		}
 	}
 	
-	if ((this._path.length == 0) || !(this.distance(this._path[this._path.length - 1], portals[portals.length - 1].left) < 0.000001)) {
+	if ((this._path.length == 0) || !(this._path[this._path.length - 1].distance(portals[portals.length - 1].left) < 0.000001)) {
 		// Append last point to path.
 		this._path.push(portals[portals.length - 1].left);
 	}	
@@ -572,17 +588,6 @@ Phaser.Plugin.navPath.prototype.triArea = function(a, b, c) {
 	var by = c.y - a.y;
 	
 	return bx * ay - ax * by;
-};
-
-/** 
-* Returns the distance between point a and b
-* @method Phaser.Plugin.navPath.distance
-* @param {Phaser.Point} a - The 1st point. 
-* @param {Phaser.Point} b - The 2nd point. 
-* @return {number} Distance between point a and b
-*/
-Phaser.Plugin.navPath.prototype.distance = function(a, b) {    
-	return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 };
 
 /** 

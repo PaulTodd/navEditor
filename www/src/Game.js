@@ -1,10 +1,3 @@
-//TODO:
-//add localStorage option to save level
-//add settings window and remove toggle buttons on toolbar
-//settings for all show options on settings window
-//
-
-
 // create BasicGame Class
 BasicGame = {
 
@@ -111,43 +104,141 @@ BasicGame.Game.prototype = {
         //setup keyboard commands
         k_createCollision = this.input.keyboard.addKey(Phaser.Keyboard.C);
         k_createCollision.onUp.add(this.createPolygon, this);
-        k_refresh = this.input.keyboard.addKey(Phaser.Keyboard.R);
+        k_refresh = this.input.keyboard.addKey(Phaser.Keyboard.V);
         k_refresh.onUp.add(this.calculate, this);
+        k_rotateLeft = this.input.keyboard.addKey(Phaser.Keyboard.Q);
+        k_rotateRight = this.input.keyboard.addKey(Phaser.Keyboard.W);
+        k_sizeUp = this.input.keyboard.addKey(Phaser.Keyboard.A);
+        k_sizeDown = this.input.keyboard.addKey(Phaser.Keyboard.S);
+        k_angleUp = this.input.keyboard.addKey(Phaser.Keyboard.Z);
+        k_angleDown = this.input.keyboard.addKey(Phaser.Keyboard.X);
+        k_segmentsAdd = this.input.keyboard.addKey(Phaser.Keyboard.E);
+        k_segmentsRemove = this.input.keyboard.addKey(Phaser.Keyboard.R);
     },
     
-    update: function() {
-        if(dragging !== null){
-            for(var i = 0; i < collisionGroup.children.length; i++){
-                if(collisionGroup.children[i] == dragging){
-                    for (var j = 0; j < collisionGroup.children[i].hitArea.length; j++) {
-                        collisionGroup.children[i].hitArea[j].x = collisionGroup.children[i].hitArea[j].x+collisionGroup.children[i].deltaX;
-                        collisionGroup.children[i].hitArea[j].y = collisionGroup.children[i].hitArea[j].y+collisionGroup.children[i].deltaY;
+    changeLight: function(type){
+        //*********************************************
+        //This errors sometimes need to figure out why. Can't find null sprite.
+        //*********************************************
+        var spriteLight = this.game.input.mousePointer.targetObject.sprite;
+        if(spriteLight !== null && this.game.input.mousePointer.targetObject.sprite.name == "light") {
+            var light = spriteLight.light;
+            switch(type) {
+                 case "rotateLeft":
+                        light.direction -= rotateAmount;
+                    break;
+                 case "rotateRight":
+                        light.direction += rotateAmount;
+                    break;
+                 case "sizeUp":
+                    light.radius += sizeAmount;
+                    break;
+                 case "sizeDown":
+                    if(light.radius > 0)
+                        light.radius -= sizeAmount;
+                    break;
+                 case "angleUp":
+                    if(light.angle < 360)
+                        light.angle += angleAmount;
+                        light.segAngle = light.angle / light.arcSegments;
+                    break;
+                 case "angleDown":
+                    if(light.angle > 0)
+                        light.angle -= angleAmount;
+                        light.segAngle = light.angle / light.arcSegments;
+                    break;
+                 case "segmentsAdd":
+                    if(light.arcSegments < 100){
+                        light.arcSegments += segAmount;
+                        light.segAngle = light.angle / light.arcSegments;
                     }
-                    this.calculate();
-                }
+                    break;
+                 case "segmentsRemove":
+                    if(light.arcSegments > 3){
+                        light.arcSegments -= segAmount;
+                        light.segAngle = light.angle / light.arcSegments;
+                    }
+                    break;
+             } 
+
+            this.updateLight(spriteLight);
+        }
+    },
+        
+    updateLight: function(spriteLight) {
+        var points = lights.compute(spriteLight.light)
+        var Shape = new Phaser.Polygon(); 
+        Shape.setTo(points);
+        var graphics = this.game.add.graphics();
+        graphics.boundsPadding = 0;
+        graphics.beginFill("0x"+tinycolor(cLight).toHex(), tinycolor(cLight).getAlpha());
+        graphics.drawPolygon(Shape);
+        graphics.endFill();
+        var x = 9999999;
+        var y = 9999999;
+        for(var i = 0; i < points.length; i++){
+            x = Math.min(x, points[i].x);
+            y = Math.min(y, points[i].y);
+        }
+
+        spriteLight.loadTexture(graphics.generateTexture());
+        spriteLight.world = graphics.world;
+        spriteLight.x = x;
+        spriteLight.y = y;
+        spriteLight.hitArea = points;
+
+        graphics.destroy();
+    },
+    
+    update: function() {        
+        if (k_rotateLeft.isDown)
+        {
+            this.changeLight("rotateLeft");
+        }
+        else if (k_rotateRight.isDown)
+        {
+            this.changeLight("rotateRight");
+        }
+        else if (k_sizeUp.isDown)
+        {
+            this.changeLight("sizeUp");
+        }
+        else if (k_sizeDown.isDown)
+        {
+            this.changeLight("sizeDown");
+        }
+        else if (k_angleUp.isDown)
+        {
+            this.changeLight("angleUp");
+        }
+        else if (k_angleDown.isDown)
+        {
+            this.changeLight("angleDown");
+        }
+        else if (k_segmentsAdd.isDown)
+        {
+            this.changeLight("segmentsAdd");
+        }
+        else if (k_segmentsRemove.isDown)
+        {
+            this.changeLight("segmentsRemove");
+        }
+        
+        if(dragging !== null){
+            for (var j = 0; j < dragging.hitArea.length; j++) {
+                dragging.hitArea[j].x = dragging.origin[j].x+dragging.x;
+                dragging.hitArea[j].y = dragging.origin[j].y+dragging.y;
+            }
+            this.calculate();
+            this.updateLightCollision();
+            for(var k = 0; k < lightGroup.children.length; k++){
+                this.updateLight(lightGroup.children[k]);   
             }
         }
         
         if(draggingLight !== null){
-            for(var i = 0; i < lightGroup.children.length; i++){
-                if(lightGroup.children[i] == draggingLight){
-                    draggingLight.light.point = new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY);
-                    var points = lights.compute(draggingLight.light,0)
-                    var Shape = new Phaser.Polygon(); 
-                    Shape.setTo(points);
-                    var graphics = this.game.add.graphics();
-                    graphics.boundsPadding = 0;
-                    graphics.beginFill("0x"+tinycolor(cLight).toHex(), tinycolor(cLight).getAlpha());
-                    graphics.drawPolygon(Shape);
-                    graphics.endFill();
-                    
-                    draggingLight.loadTexture(graphics.generateTexture());
-                    draggingLight.world = graphics.world;
-                    draggingLight.hitArea = points;
-                    
-                    graphics.destroy();
-                }
-            }
+            draggingLight.light.point = new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY);
+            this.updateLight(draggingLight);
         }
         
         if(pathDragging){
@@ -180,6 +271,7 @@ BasicGame.Game.prototype = {
         if(background !== null && this.game.input.activePointer.button == 0){
             if((option == "collision" || option == "trigger")){
                 var point = this.game.add.sprite(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY, 'markers', 4);
+                point.name = "point";
                 point.anchor.x = 0.5;
                 point.anchor.y = 0.5;
                 point.inputEnabled = true;
@@ -188,9 +280,9 @@ BasicGame.Game.prototype = {
                 pointGroup.add(point);
             }
             else if(option == "light"){
-                                                                                        //position, angle, radius, arcSegments, color1, color2, type, gradient
-                var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 100, 100, 8);
-                var points = lights.compute(myLight,0)
+                                                                                        //position, angle, direction, radius, arcSegments, color1, color2, type, gradient
+                var myLight = lights.addLight(new Phaser.Point(this.game.input.activePointer.worldX, this.game.input.activePointer.worldY), 250, 0, 100, 8);
+                var points = lights.compute(myLight)
                 var Shape = new Phaser.Polygon(); 
                 Shape.setTo(points);                
                 var graphics = this.game.add.graphics();
@@ -206,6 +298,7 @@ BasicGame.Game.prototype = {
                     y = Math.min(y, points[i].y);
                 }
                 var sprite = this.game.add.sprite(x, y, graphics.generateTexture());
+                sprite.name = "light";
                 sprite.light = myLight;
                 sprite.world = graphics.world;
                 sprite.hitArea = points;
@@ -241,8 +334,13 @@ BasicGame.Game.prototype = {
                 y = Math.min(y, points[i].y);
             }
             var sprite = this.add.sprite(x, y, graphics.generateTexture());
+            sprite.name = "collision";
             sprite.world = graphics.world;
             sprite.hitArea = points;
+            sprite.origin = []
+            for(var i = 0; i < points.length; i++){
+                sprite.origin.push(new Phaser.Point(points[i].x-x, points[i].y-y));
+            }
             sprite.inputEnabled = true;
             sprite.input.enableDrag();
             sprite.events.onDragStart.add(function(){dragging = this;}, sprite);
@@ -258,18 +356,18 @@ BasicGame.Game.prototype = {
             }
             graphics.destroy();
             pointGroup.removeAll();
-            this.updateLights();
+            this.updateLightCollision();
         }
     },
     
-    updateLights: function(){
+    updateLightCollision: function(){
         var col = [];
         var coltemp = [];
         coltemp.push(new Phaser.Point(background.x-1, background.y-1));
         coltemp.push(new Phaser.Point(background.width+1, background.y-1));
         coltemp.push(new Phaser.Point(background.width+1, background.height+1));
         coltemp.push(new Phaser.Point(background.x-1, background.height+1));
-        coltemp.push(coltemp);
+        col.push(coltemp);
         for(var i = 0; i < collisionGroup.children.length; i++){
             col.push(collisionGroup.children[i].hitArea);                    
         }
@@ -641,12 +739,13 @@ function onLoaded(){
     if(background !== null)
         background.destroy();
     background = myGame.add.sprite(0, 0, 'background');
+    background.name = "background";
     myGame.world.setBounds(0, 0, background.width, background.height);
     background.z = 0;
     myGame.world.sort();
     background.inputEnabled = true;
     background.events.onInputUp.add(BasicGame.Game.prototype.click, background);
-    BasicGame.Game.prototype.updateLights();
+    BasicGame.Game.prototype.updateLightCollision();
 }
 
 document.getElementById("fileUpload").addEventListener("change", readImage, false);

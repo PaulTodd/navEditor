@@ -5,6 +5,10 @@ var option = "";
 //Level
 var fileName = "NewFile";
 var spacing = 10;
+var rotateAmount = 1;
+var sizeAmount = 5;
+var angleAmount = 5;
+var segAmount = 1;
 var smooth = false;
 
 //Visibility

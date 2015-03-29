@@ -17,10 +17,12 @@ Phaser.Plugin.lights = function (parent)
 Phaser.Plugin.lights.prototype = Object.create(Phaser.Plugin.prototype);
 Phaser.Plugin.lights.prototype.constructor = Phaser.Plugin.lights;
 
-Phaser.Plugin.lights.Light = function(position, angle, radius, arcSegments, color1, color2, type, gradient)
+Phaser.Plugin.lights.Light = function(position, angle, direction, radius, arcSegments, color1, color2, type, gradient)
 {
     //starting point of the light
 	this.point = position || new Phaser.Point(0, 0);
+    this.direction = direction || 0;
+    this.direction *= -1;
     this.angle = angle || 360;
     if(this.angle == 0){
         this.angle = 360;
@@ -41,14 +43,6 @@ Phaser.Plugin.lights.Light = function(position, angle, radius, arcSegments, colo
     if(this.arcSegments > 0){
         this.segAngle = this.angle / this.arcSegments;
     }
-
-    this.color1 = color1 || 'rgb(255,60,60)';
-    this.color2 = color2 || 'rgb(255,60,60)';
-    
-    //types could be light, flicker, fov. 
-    this.type = type || "light";
-
-    this.gradient = gradient || false;
     
     this.parent; 
 };
@@ -74,9 +68,9 @@ Phaser.Plugin.lights.prototype.createSegments = function(collisionObjects, polyg
     
 };
 
-Phaser.Plugin.lights.prototype.addLight = function(position, angle, radius, arcSegments, color1, color2, type, gradient)
+Phaser.Plugin.lights.prototype.addLight = function(position, angle,direction, radius, arcSegments, color1, color2, type, gradient)
 {
-    var light = new Phaser.Plugin.lights.Light(position, angle, radius, arcSegments, color1, color2, type, gradient);
+    var light = new Phaser.Plugin.lights.Light(position, angle, direction, radius, arcSegments, color1, color2, type, gradient);
     this._lights.push(light);
     
     return light;    
@@ -96,14 +90,11 @@ Phaser.Plugin.lights.prototype.removeLight = function(light)
     return false;
 };
 
-Phaser.Plugin.lights.prototype.compute = function(light, direction) {
-    var init_direction = direction || 0;
-    init_direction *= -1;
-    direction = init_direction;
-    
+Phaser.Plugin.lights.prototype.compute = function(light) {
     if(light === null){
         return [];   
     }
+    var direction = light.direction;
     var segments = this._segments;
     
     if(light.arcSegments > 0){
@@ -156,7 +147,7 @@ Phaser.Plugin.lights.prototype.compute = function(light, direction) {
     //for debug
     this._points = segments;
     
-    var t = new Phaser.Point(light.point.x + light.radius * Math.cos(init_direction * Math.PI / 180), light.point.y + light.radius * Math.sin(init_direction * Math.PI / 180));
+    var t = new Phaser.Point(light.point.x + light.radius * Math.cos(light.direction * Math.PI / 180), light.point.y + light.radius * Math.sin(light.direction * Math.PI / 180));
     
     var x = t.x - light.point.x;
     var y = t.y - light.point.y;
@@ -433,7 +424,7 @@ Phaser.Plugin.lights.prototype.intersectLines = function(a1, a2, b1, b2) {
 Phaser.Utils.Debug.prototype.lights = function(lights, x, y)
 {
     for(var i = 0; i < lights._points.length; i++){
-        this.context.strokeStyle = Phaser.Color.getRandomColor();
+        this.context.strokeStyle = 'rgba(255, 255, 0, 1)';
         this.context.lineWidth = 2;
         this.context.beginPath();
         this.context.moveTo(lights._points[i].start.x - this.game.camera.x, lights._points[i].start.y - this.game.camera.y);
