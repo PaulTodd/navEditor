@@ -102,9 +102,9 @@ BasicGame.Game.prototype = {
         lightGroup = this.add.group(); 
 
         //setup keyboard commands
-        k_createCollision = this.input.keyboard.addKey(Phaser.Keyboard.C);
+        k_createCollision = this.input.keyboard.addKey(Phaser.Keyboard.T);
         k_createCollision.onUp.add(this.createPolygon, this);
-        k_refresh = this.input.keyboard.addKey(Phaser.Keyboard.V);
+        k_refresh = this.input.keyboard.addKey(Phaser.Keyboard.Y);
         k_refresh.onUp.add(this.calculate, this);
         k_rotateLeft = this.input.keyboard.addKey(Phaser.Keyboard.Q);
         k_rotateRight = this.input.keyboard.addKey(Phaser.Keyboard.W);
@@ -114,6 +114,11 @@ BasicGame.Game.prototype = {
         k_angleDown = this.input.keyboard.addKey(Phaser.Keyboard.X);
         k_segmentsAdd = this.input.keyboard.addKey(Phaser.Keyboard.E);
         k_segmentsRemove = this.input.keyboard.addKey(Phaser.Keyboard.R);
+        k_rotateSpeedUp = this.input.keyboard.addKey(Phaser.Keyboard.D);
+        k_rotateSpeedDown = this.input.keyboard.addKey(Phaser.Keyboard.F);
+        k_rotateAngleUp = this.input.keyboard.addKey(Phaser.Keyboard.C);
+        k_rotateAngleDown = this.input.keyboard.addKey(Phaser.Keyboard.V);
+        k_rotate = this.input.keyboard.addKey(Phaser.Keyboard.B);
     },
     
     changeLight: function(type){
@@ -125,11 +130,30 @@ BasicGame.Game.prototype = {
             var light = spriteLight.light;
             switch(type) {
                  case "rotateLeft":
-                        light.direction -= rotateAmount;
+                    spriteLight.dir -= rotateAmount;
                     break;
                  case "rotateRight":
-                        light.direction += rotateAmount;
+                    spriteLight.dir += rotateAmount;
                     break;
+                 case "rotateSpeedInc":
+                    if(spriteLight.speed > 100)
+                        spriteLight.speed -= rotateSpeed;
+                    break;
+                 case "rotateSpeedDec":
+                    if(spriteLight.speed < 1000)
+                        spriteLight.speed += rotateSpeed;
+                    break;
+                 case "rotateAngleInc":
+                    if(spriteLight.rotateAngle < 360)
+                        spriteLight.rotateAngle += rotateAngle;
+                    break;
+                 case "rotateAngleDec":
+                    if(spriteLight.rotateAngle > 0)
+                        spriteLight.rotateAngle -= rotateAngle;
+                    break;   
+                 case "rotate":
+                    spriteLight.rotate = !spriteLight.rotate;
+                    break;    
                  case "sizeUp":
                     light.radius += sizeAmount;
                     break;
@@ -190,7 +214,14 @@ BasicGame.Game.prototype = {
         graphics.destroy();
     },
     
-    update: function() {        
+    update: function() {  
+        for(var a = 0; a < lightGroup.children.length; a++){
+            if(lightGroup.children[a].rotate){
+                lightGroup.children[a].light.direction = lightGroup.children[a].dir + Math.sin(this.game.time.now/lightGroup.children[a].speed) * lightGroup.children[a].rotateAngle;
+                this.updateLight(lightGroup.children[a]);
+            }
+        }
+        
         if (k_rotateLeft.isDown)
         {
             this.changeLight("rotateLeft");
@@ -203,6 +234,26 @@ BasicGame.Game.prototype = {
         {
             this.changeLight("sizeUp");
         }
+        else if (k_rotateSpeedUp.isDown)
+        {
+            this.changeLight("rotateSpeedInc");
+        }
+        else if (k_rotateSpeedDown.isDown)
+        {
+            this.changeLight("rotateSpeedDec");
+        }
+        else if (k_rotateAngleUp.isDown)
+        {
+            this.changeLight("rotateAngleInc");
+        }
+        else if (k_rotateAngleDown.isDown)
+        {
+            this.changeLight("rotateAngleDec");
+        }
+        else if (k_rotate.isDown)
+        {
+            this.changeLight("rotate");
+        }        
         else if (k_sizeDown.isDown)
         {
             this.changeLight("sizeDown");
@@ -300,6 +351,10 @@ BasicGame.Game.prototype = {
                 var sprite = this.game.add.sprite(x, y, graphics.generateTexture());
                 sprite.name = "light";
                 sprite.light = myLight;
+                sprite.dir = 0;
+                sprite.speed = 1000;
+                sprite.rotateAngle = 25;
+                sprite.rotate = false;
                 sprite.world = graphics.world;
                 sprite.hitArea = points;
                 sprite.inputEnabled = true;
@@ -501,7 +556,8 @@ BasicGame.Game.prototype = {
             }
         }
         this.game.debug.stop();
-this.game.debug.lights(lights, 0 ,0);
+        //lights, x, y, showSegments, showPoints, showLightPositions, textColor, segmentColor, pointColor, lightPointColor
+this.game.debug.lights(lights, 0 ,0, true, true, true);
         this.game.debug.navPath(navPath, 20, 20, nWidth, pWidth, vPath, true, vNavMesh, vCollision, vText, cText, cPath, cNavMeshBoarder, cNavMesh, cNavMeshCollision);
         //navPath, x, y, lineWidth, pathWidth, showPath, showPoints, showNavMesh, showCollisionObjects, showText, textColor, pathColor, lineColor, navColor, navColColor
 

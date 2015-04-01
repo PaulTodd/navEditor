@@ -421,19 +421,31 @@ Phaser.Plugin.lights.prototype.intersectLines = function(a1, a2, b1, b2) {
 	return [];
 };
 
-Phaser.Utils.Debug.prototype.lights = function(lights, x, y)
-{
-    for(var i = 0; i < lights._points.length; i++){
-        this.context.strokeStyle = 'rgba(255, 255, 0, 1)';
-        this.context.lineWidth = 2;
-        this.context.beginPath();
-        this.context.moveTo(lights._points[i].start.x - this.game.camera.x, lights._points[i].start.y - this.game.camera.y);
-        this.context.lineTo(lights._points[i].end.x - this.game.camera.x, lights._points[i].end.y - this.game.camera.y);
-        this.context.fill();
-        this.context.stroke();
-        
-        this.context.beginPath();
-        this.context.arc(lights._points[i].start.x - this.game.camera.x, lights._points[i].start.y - this.game.camera.y, 2, 0, Math.PI*2, true);
-        this.context.stroke(); 
+Phaser.Utils.Debug.prototype.lights = function(lights, x, y, showSegments, showPoints, showLightPositions, textColor, segmentColor, pointColor, lightPointColor)
+{    
+    showSegments = showSegments || false;        
+    showPoints = showPoints || false;
+    showLightPositions = showLightPositions || false;
+    textColor = textColor || 'rgb(255,60,60)';
+    segmentColor = segmentColor || 'rgb(255,100,200)';
+    pointColor = pointColor || 'rgb(255,210,60)';
+    lightPointColor = lightPointColor || 'rgb(255,100,60)';
+    
+    if(showSegments){
+        for(var a= 0; a < lights._segments.length; a++){
+            this.game.debug.geom(lights._segments[a], segmentColor);
+        }
+    }
+    
+    if(showLightPositions){
+        for(var a = 0; a < lights._lights.length; a++){       
+            this.game.debug.geom(lights._lights[a].point, lightPointColor);    
+        }   
+    }
+    
+    if(showPoints){
+        for(var i = 0; i < lights._points.length; i++){
+            this.game.debug.geom(lights._points[a], pointColor);
+        }
     }
 };
