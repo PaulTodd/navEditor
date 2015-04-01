@@ -158,9 +158,7 @@ Phaser.Plugin.lights.prototype.compute = function(light) {
     var ratio = 1 / Math.max(ax, ay);
     ratio = ratio * (1.29289 - (ax + ay) * ratio * 0.29289)
 
-    //not coming out right!!!!
     var position = new Phaser.Point(light.point.x + (x * ratio), light.point.y + (y * ratio));
-    //return position;
 	var polygon = [];
 	var sorted = this.sortPoints(position, segments);
 	var map = new Array(segments.length);
@@ -217,7 +215,7 @@ Phaser.Plugin.lights.prototype.compute = function(light) {
             if(heap[0] !== undefined){
 			    var cur = this.intersectLines(segments[heap[0]].start, segments[heap[0]].end, position, vertex);
                 var pcur = new Phaser.Point(cur[0], cur[1]);
-            	if (!pcur.equals(pcur, vertex)) polygon.push(pcur);
+            	if (!pcur.equals(vertex)) polygon.push(pcur);
             }
 		} else if (shorten) {
             if(segments[old_segment] !== undefined){
@@ -444,8 +442,12 @@ Phaser.Utils.Debug.prototype.lights = function(lights, x, y, showSegments, showP
     }
     
     if(showPoints){
-        for(var i = 0; i < lights._points.length; i++){
+        for(var a = 0; a < lights._points.length; a++){
             this.game.debug.geom(lights._points[a], pointColor);
+
+            this.context.beginPath();
+            this.context.arc(lights._points[a].start.x - this.game.camera.x, lights._points[a].start.y - this.game.camera.y, 2, 0, Math.PI*2, true);
+            this.context.stroke(); 
         }
     }
 };

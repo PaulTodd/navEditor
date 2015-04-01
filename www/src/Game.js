@@ -557,7 +557,7 @@ BasicGame.Game.prototype = {
         }
         this.game.debug.stop();
         //lights, x, y, showSegments, showPoints, showLightPositions, textColor, segmentColor, pointColor, lightPointColor
-this.game.debug.lights(lights, 0 ,0, true, true, true);
+        this.game.debug.lights(lights, 0 ,0, true, true, true);
         this.game.debug.navPath(navPath, 20, 20, nWidth, pWidth, vPath, true, vNavMesh, vCollision, vText, cText, cPath, cNavMeshBoarder, cNavMesh, cNavMeshCollision);
         //navPath, x, y, lineWidth, pathWidth, showPath, showPoints, showNavMesh, showCollisionObjects, showText, textColor, pathColor, lineColor, navColor, navColColor
 
